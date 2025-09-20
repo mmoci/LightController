@@ -28,31 +28,31 @@ void LightController::init()
     m_light.subscribeOnStateChange([this](const Light::State& state){
         if(!m_mqttHandler)
         {
-            Serial.println("Mqtt Handler does not exists - nullptr ");
+            Serial.println("MQTT Handler is null (skipping publishing state)");
             return;
         }
-        m_mqttHandler->setPublishingTopics(Config::Mqtt::Topics::STATE, m_light.stateToStr(state));
+        m_mqttHandler->setPublishingTopics(std::string{Config::Mqtt::Topics::STATE}, m_light.stateToStr(state));
     });
 
     m_light.subscribeOnBrightnessChange([this](int brightness){
         if(!m_mqttHandler)
         {
-            Serial.println("Mqtt Handler does not exists - nullptr ");
+            Serial.println("MQTT Handler is null (skipping publishing brightness)");
             return;
         }
-        m_mqttHandler->setPublishingTopics(Config::Mqtt::Topics::BRIGHTNESS, std::to_string(brightness));
+        m_mqttHandler->setPublishingTopics(std::string{Config::Mqtt::Topics::BRIGHTNESS}, std::to_string(brightness));
     });
 
     if(m_mqttHandler)
     {
-        m_mqttHandler->subscribeOnMessageReceived(std::string{Config::Mqtt::Topics::STATE}, [this](const std::string& payload) {
+        m_mqttHandler->subscribeTopic(std::string{Config::Mqtt::Topics::STATE_SET}, [this](const std::string& payload) {
             std::string upperPayload{payload};
             std::transform(upperPayload.begin(), upperPayload.end(), upperPayload.begin(), [](unsigned char c){return std::toupper(c);});
             if(upperPayload == "ON") m_light.setState(Light::State::On); 
             if(upperPayload == "OFF") m_light.setState(Light::State::Off); 
         });
         
-        m_mqttHandler->subscribeOnMessageReceived(std::string{Config::Mqtt::Topics::BRIGHTNESS}, [this](const std::string& payload) { 
+        m_mqttHandler->subscribeTopic(std::string{Config::Mqtt::Topics::BRIGHTNESS_SET}, [this](const std::string& payload) { 
             try
             {
                 int brightness = std::stoi(payload);
@@ -65,7 +65,7 @@ void LightController::init()
         });
 
         // Set default values for publishing topics
-        m_mqttHandler->setPublishingTopics(Config::Mqtt::Topics::STATE, m_light.stateToStr(m_light.getState()));
-        m_mqttHandler->setPublishingTopics(Config::Mqtt::Topics::BRIGHTNESS, std::to_string(m_light.getBrightness()));
+        m_mqttHandler->setPublishingTopics(std::string{Config::Mqtt::Topics::STATE}, m_light.stateToStr(m_light.getState()));
+        m_mqttHandler->setPublishingTopics(std::string{Config::Mqtt::Topics::BRIGHTNESS}, std::to_string(m_light.getBrightness()));
     }
 }

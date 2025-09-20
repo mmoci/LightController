@@ -14,8 +14,8 @@ namespace Config
         const IPAddress STATIC_IP(192,168,1,16);
         const IPAddress GATEWAY(192,168,1,1);
         const IPAddress SUBNET(255,255,255,0);
-        const IPAddress DNS1(85,94,64,10);
-        const IPAddress DNS2(85,94,64,11);
+        const IPAddress DNS1(192,168,1,1);
+        const IPAddress DNS2(192,168,1,2);
     }
 
     // MQTT configuration variables

@@ -19,7 +19,7 @@ void MqttHandler::setupWifi()
 
   // Set WIFI mode, WIFI_STA - Station (STA) mode is used to get ESP module connected to a WiFi network established by an access point
   WiFi.mode(WIFI_STA);
-  WiFi.config(Config::WiFi::STATIC_IP, Config::WiFi::GATEWAY, Config::WiFi::SUBNET); //For statis IP address
+  WiFi.config(Config::WiFi::STATIC_IP, Config::WiFi::GATEWAY, Config::WiFi::SUBNET, Config::WiFi::DNS1, Config::WiFi::DNS2); //For statis IP address
   WiFi.begin(Config::WiFi::WIFI_SSID.data(), Config::WiFi::WIFI_PASSWORD.data());
 
   while (WiFi.status() != WL_CONNECTED) 
@@ -40,7 +40,7 @@ bool MqttHandler::connect() {
     const int willQoS = 0;
     const bool willRetain = true;
     const std::string willTopic{Config::Mqtt::Topics::AVAILABILITY};
-    const std::string willPayload{availablityToStr(Availability::Offline)};
+    const std::string willPayload{availabilityToStr(Availability::Offline)};
 
     if (m_mqttClient.connect(m_clientName.data(), 
                              m_username.data(), 
@@ -51,7 +51,7 @@ bool MqttHandler::connect() {
         Serial.println("Connected to MQTT broker");
         m_availabilityState = Availability::Online;
 
-        publishTopic(Config::Mqtt::Topics::AVAILABILITY, availablityToStr(m_availabilityState), true);
+        publishTopic(Config::Mqtt::Topics::AVAILABILITY, availabilityToStr(m_availabilityState), true);
         publishTopic(Config::Mqtt::Topics::DISCOVERY, Config::Mqtt::DISCOVERY_PAYLOAD, true);
         subscribeAllTopics();
         return true;
@@ -85,12 +85,14 @@ void MqttHandler::process()
     } 
 }
 
-void MqttHandler::setPublishingTopics(std::string_view topic, const std::string& payload)
+void MqttHandler::setPublishingTopics(const std::string& topic, const std::string& payload)
 {
     auto it = m_publishingTopics.find(topic);
 
-    if(it != m_publishingTopics.end()) 
-        it->second = payload;
+    if(it != m_publishingTopics.end())
+    {
+        it->second = {payload, true};
+    } 
     else 
         Serial.println("Ignoring unknown publishing topic: " + String(topic.data()));
 }
@@ -107,10 +109,15 @@ void MqttHandler::publishTopic(std::string_view stringTopic, std::string_view st
 void MqttHandler::publishAllTopics()
 {
     // Publish all topics from the map
-    for(auto& [topic, payload] : m_publishingTopics)
+    for(auto& [topic, payloadData] : m_publishingTopics)
     {
-        if(!payload.empty())
+        auto& [payload, shouldPublish] = payloadData;
+
+        if(shouldPublish && !payload.empty())
+        {
             publishTopic(topic, payload, true);
+            shouldPublish = false;
+        }
     }
 }
 
@@ -132,11 +139,10 @@ void MqttHandler::subscribeAllTopics()
     }
 }
 
-void MqttHandler::subscribeOnMessageReceived(std::string_view topic,  OnMessageReceivedCb onMessageReceivedCb)
+void MqttHandler::subscribeTopic(const std::string& topic,  OnMessageReceivedCb onMessageReceivedCb)
 {
-    std::string subscribingTopic{std::string{topic} + "/set"};
-    m_subscribingTopics.insert(subscribingTopic);
-    subscribeTopic(subscribingTopic);
+    m_subscribingTopics.insert(topic);
+    subscribeTopic(topic);
     m_onMessageReceivedCbMap[topic] = std::move(onMessageReceivedCb);
 }
 
@@ -147,8 +153,6 @@ void MqttHandler::receiveMessages(char* topic, byte* payload, unsigned int lengt
 
     Serial.println("Message arrived [" + String(strTopic.c_str()) + "] payload: " + String(strMessage.c_str()));
 
-    getBaseTopic(strTopic);
-
     auto it = m_onMessageReceivedCbMap.find(strTopic);
     if(it != m_onMessageReceivedCbMap.end())
     {
@@ -158,6 +162,8 @@ void MqttHandler::receiveMessages(char* topic, byte* payload, unsigned int lengt
         Serial.println("No match found for [" + String(strTopic.c_str()) + "]");
 }
 
+
+// This member function is currently not used - subscribing topics are stored in the map as key with /set postfix, no need to strip it.
 void MqttHandler::getBaseTopic(std::string& topic)
 {
     if(topic.size() > 4 && topic.compare(topic.size() - 4, 4, "/set") == 0)
@@ -166,7 +172,7 @@ void MqttHandler::getBaseTopic(std::string& topic)
     }
 }
 
-std::string MqttHandler::availablityToStr(const Availability& availablitiy)
+std::string MqttHandler::availabilityToStr(const Availability& availablitiy)
 {
     switch(availablitiy)
     {

@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <functional>
+#include <vector>
+#include <memory>
 
 class Light
 {
@@ -17,9 +19,11 @@ class Light
     using OnBrightnessChange = std::function<void(int)>;
 
     // Default ledChannel = 0, PWM frequency 10kHz, 8-bit resolution
-    Light(int pin, int ledChannel = 0, int frequency = 10000, int resolution = 8);
+    Light(std::string_view m_name, std::string_view m_id, int pin, int ledChannel = 0, int frequency = 10000, int resolution = 8);
 
     void init();
+    std::string_view getName() const;
+    std::string_view getId() const;
     void setState(const State& state);
     void setBrightness(int brightness);
     State getState() const;
@@ -32,6 +36,8 @@ class Light
     std::string stateToStr(const Light::State& state);
 
     private:
+    std::string m_name{};
+    std::string m_id{};
     int m_pwmPin{};
     int m_ledChannel{};
     int m_frequency{};

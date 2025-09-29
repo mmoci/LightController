@@ -8,22 +8,22 @@ void PirSensor::init()
     pinMode(m_pin, INPUT);
 }
 
-void PirSensor::subscribeOnStateChange(OnStateChange onStateChange)
-{
-    m_onStateChangeCb = std::move(onStateChange);
-}
-
 PirSensor::BinaryState PirSensor::readSensor()
 {
     BinaryState state = static_cast<BinaryState>(digitalRead(m_pin));
 
-    if(state != m_state)
-    {
-        m_state = state;
-        
-        if (m_onStateChangeCb)
-            m_onStateChangeCb(m_state);
-    }
+    BinarySensor::notifyStateChange(state);
 
-    return m_state;
+    return BinarySensor::getState();
+}
+
+void PirSensor::bindToLight(Light& light)
+{
+    subscribeOnStateChange([&light](PirSensor::BinaryState state){
+        if(state == PirSensor::BinaryState::High && light.getState() == Light::State::Off)
+            light.turnOn();
+
+        if(state == PirSensor::BinaryState::Low && light.getState() == Light::State::On)
+            light.turnOff();
+    });
 }

@@ -2,6 +2,7 @@
 #define BINARYSENSOR_H
 
 #include "Sensor.h"
+#include "Light.h"
 
 class BinarySensor : public Sensor
 {
@@ -12,11 +13,17 @@ class BinarySensor : public Sensor
         High
     };
 
+    using OnStateChange = std::function<void(const BinaryState&)>;
+
     BinarySensor(int pin) : Sensor(pin)
     {}
 
     virtual void init() = 0;
     virtual BinaryState readSensor() = 0;
+    virtual void bindToLight(Light& light) = 0;
+
+    void subscribeOnStateChange(OnStateChange onStateChange);
+    
     virtual ~BinarySensor() = default;
 
     BinaryState getState() const
@@ -24,8 +31,12 @@ class BinarySensor : public Sensor
         return m_state;
     }
 
+    protected:
+    void notifyStateChange(BinaryState newState);
+
     private:
-    BinaryState m_state{};
+    BinaryState m_state{BinaryState::Low};
+    OnStateChange m_onStateChangeCb{};
 };
 
 #endif

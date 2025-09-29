@@ -1,22 +1,33 @@
 #ifndef LIGHTCONTROLLER_H
 #define LIGHTCONTROLLER_H
 
-#include <PirSensor.h>
-#include <Button.h>
-#include <Light.h>
-#include <MqttHandler.h>
+#include "PirSensor.h"
+#include "Button.h"
+#include "Light.h"
+#include "MqttHandler.h"
 
 class LightController
 {
     public:
-    LightController(Light& light, Button& powerButton, PirSensor& pirSensor, MqttHandler* m_mqttHandler = nullptr);
+    struct LightEntry
+    {
+        std::unique_ptr<Light> lightPtr{};
+        std::vector<std::unique_ptr<BinarySensor>> binarySensors{};
+    };
 
-    void init();
+    LightController(MqttHandler* m_mqttHandler = nullptr);
+
+    void setupDevices();
+    void subscribe();
+    void addLight(std::unique_ptr<Light> light, std::vector<std::unique_ptr<BinarySensor>> binarySensors = {});
+    void update();
 
     private:
-    Button& m_powerButton;
-    PirSensor& m_pirSensor;
-    Light& m_light;
+    std::string createDiscoveryPayload(const std::string& lightId) const;
+    std::string getDiscoveryPayload(const std::string& lightId) const;
+
+    std::unordered_map<std::string, LightEntry> m_lights{};
+    std::unordered_map<std::string, std::string> m_discoveryPayloadCache{};
     MqttHandler* m_mqttHandler{};
 };
 

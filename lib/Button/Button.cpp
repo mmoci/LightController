@@ -8,11 +8,6 @@ void Button::init()
     pinMode(m_pin, INPUT);
 }
 
-void Button::subscribeOnStateChange(OnStateChange onStateChange)
-{
-    m_onStateChangeCb = std::move(onStateChange);
-}
-
 Button::BinaryState Button::readSensor()
 {
     BinaryState state = static_cast<BinaryState>(digitalRead(m_pin));
@@ -24,15 +19,17 @@ Button::BinaryState Button::readSensor()
 
     if(millis() - m_lastPress > DEBOUNCE_DELAY)
     {
-        if(state != m_state)
-        {
-            m_state = state;
-
-            if(m_onStateChangeCb)
-                m_onStateChangeCb(m_state);
-        }
+        BinarySensor::notifyStateChange(state);
     }
 
     m_lastState = state;
-    return m_state;
+    return BinarySensor::getState();
+}
+
+void Button::bindToLight(Light& light)
+{
+    subscribeOnStateChange([&light](Button::BinaryState state){
+        if(state == Button::BinaryState::High)
+            light.toggle();
+    });
 }

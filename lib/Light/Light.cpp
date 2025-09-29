@@ -1,7 +1,9 @@
 #include "Light.h"
 #include <Arduino.h>
 
-Light::Light(int pin, int ledChannel, int frequency, int resolution) :
+Light::Light(std::string_view name, std::string_view id, int pin, int ledChannel, int frequency, int resolution) :
+    m_name{name},
+    m_id{id},
     m_pwmPin{pin},
     m_ledChannel{ledChannel},
     m_frequency{frequency},
@@ -23,6 +25,16 @@ void Light::init()
     #elif defined(ESP8266)
     analogWrite(m_pwmPin, 0); // For safty reason
     #endif
+}
+
+std::string_view Light::getName() const
+{
+    return m_name;
+}
+
+std::string_view Light::getId() const
+{
+    return m_id;
 }
 
 void Light::setState(const State& state)
@@ -51,6 +63,9 @@ void Light::setBrightness(int brightness)
         turnOff();
     else
         turnOn();
+
+    if(m_onBrightnessChangeCb)
+        m_onBrightnessChangeCb(m_brightness);
 }
 
 void Light::subscribeOnBrightnessChange(OnBrightnessChange onStateChange)
@@ -75,7 +90,8 @@ void Light::turnOn()
     analogWrite(m_pwmPin, m_brightness);
     #endif
 
-    m_onStateChangeCb(m_state);
+    if (m_onStateChangeCb) 
+        m_onStateChangeCb(m_state);
 }
 
 void Light::turnOff()
@@ -90,7 +106,8 @@ void Light::turnOff()
     analogWrite(m_pwmPin, 0);
     #endif
 
-    m_onStateChangeCb(m_state);
+    if (m_onStateChangeCb)
+        m_onStateChangeCb(m_state);
 }
 
 void Light::toggle()

@@ -13,16 +13,17 @@ constexpr int LIGHT_PIN = 3;
 
 // Create a sensor objects.
 MqttHandler mqttHandler{};
-LightController controller{&mqttHandler};
+MqttLightBridge mqttLightBridge{&mqttHandler};
+LightController controller{&mqttLightBridge};
 
 void setup() 
 {
   Serial.begin(115200);
 
-  std::unique_ptr<Light> ledLight{std::make_unique<Light>("Kitchen Light", "kitchenLight", LIGHT_PIN)};
-  std::vector<std::unique_ptr<BinarySensor>> binarySensors{};
-  binarySensors.emplace_back(std::make_unique<Button>(BUTTON_PIN));
-  binarySensors.emplace_back(std::make_unique<PirSensor>(PIR_PIN));
+  std::shared_ptr<Light> ledLight{std::make_shared<Light>("Kitchen Light", "kitchenLight", LIGHT_PIN)};
+  std::vector<std::shared_ptr<BinarySensor>> binarySensors{};
+  binarySensors.emplace_back(std::make_shared<Button>(BUTTON_PIN));
+  binarySensors.emplace_back(std::make_shared<PirSensor>(PIR_PIN));
   controller.addLight(std::move(ledLight), std::move(binarySensors));
   controller.setupDevices();
   mqttHandler.init(Config::Mqtt::SERVER, Config::Mqtt::PORT, Config::Mqtt::CLIENT_NAME);

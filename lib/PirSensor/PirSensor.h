@@ -10,7 +10,7 @@ class PirSensor : public BinarySensor
 
     void init() override;
     BinaryState readSensor() override;
-    void bindToLight(Light& light) override;
+    void bindToLight(std::shared_ptr<Light> lightPtr) override;
 };
 
 #endif

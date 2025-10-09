@@ -20,16 +20,13 @@ class BinarySensor : public Sensor
 
     virtual void init() = 0;
     virtual BinaryState readSensor() = 0;
-    virtual void bindToLight(Light& light) = 0;
+    virtual void bindToLight(std::shared_ptr<Light> lightPtr) = 0;
 
     void subscribeOnStateChange(OnStateChange onStateChange);
     
     virtual ~BinarySensor() = default;
 
-    BinaryState getState() const
-    {
-        return m_state;
-    }
+    BinaryState getState() const noexcept {return m_state;}
 
     protected:
     void notifyStateChange(BinaryState newState);

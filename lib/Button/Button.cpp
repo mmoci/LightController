@@ -10,26 +10,26 @@ void Button::init()
 
 Button::BinaryState Button::readSensor()
 {
-    BinaryState state = static_cast<BinaryState>(digitalRead(m_pin));
+    BinaryState currentState = static_cast<BinaryState>(digitalRead(m_pin));
 
-    if(state != m_lastState)
-    {
-        m_lastPress = millis();
+    if (currentState != m_lastState) {
+        m_lastChangeTime = millis();     // reset debounce timer
+        m_lastState = currentState;      // update raw
     }
 
-    if(millis() - m_lastPress > DEBOUNCE_DELAY)
-    {
-        BinarySensor::notifyStateChange(state);
+    if ((millis() - m_lastChangeTime) > DEBOUNCE_DELAY && currentState != m_stableState) {
+        m_stableState = currentState;    // accept as stable
+        BinarySensor::notifyStateChange(currentState);
     }
 
-    m_lastState = state;
-    return BinarySensor::getState();
+    return m_stableState;
 }
 
-void Button::bindToLight(Light& light)
+void Button::bindToLight(std::shared_ptr<Light> lightPtr)
 {
-    subscribeOnStateChange([&light](Button::BinaryState state){
-        if(state == Button::BinaryState::High)
-            light.toggle();
+    subscribeOnStateChange([lightWeakPtr = std::weak_ptr<Light>(lightPtr)](Button::BinaryState state){
+        auto lightPtr = lightWeakPtr.lock();
+        if(lightPtr && state == Button::BinaryState::High)
+            lightPtr->toggle();
     });
 }

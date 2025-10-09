@@ -41,9 +41,6 @@ bool MqttHandler::connect() {
     const int willQoS = 0;
     const bool willRetain = true;
     const std::string availabilityTopic{MqttTopicBuilder::getAvailabilityTopic()};
-    //const std::string discoveryTopic{MqttTopicBuilder::getDiscoveryTopic()};
-    //const std::string discoveryPayload{createDiscoveryPayload(lightId, lightName)};
-
     const std::string willTopic{availabilityTopic};
     const std::string willPayload{availabilityToStr(Availability::Offline)};
 

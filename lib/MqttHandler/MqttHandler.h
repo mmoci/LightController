@@ -13,9 +13,9 @@
 
 class MqttHandler
 {
+    public:
     using OnMessageReceivedCb = std::function<void(const std::string&)>;
 
-    public:
     enum class Availability
     {
         Offline,

@@ -10,11 +10,12 @@ class Button : public BinarySensor
 
     void init() override;
     BinaryState readSensor() override;
-    void bindToLight(Light& light) override;
+    void bindToLight(std::shared_ptr<Light> lightPtr) override;
 
     private:
     BinaryState m_lastState{BinaryState::Low};
-    unsigned long m_lastPress{};
+    BinaryState m_stableState{BinaryState::Low};
+    unsigned long m_lastChangeTime{};
     static constexpr unsigned long DEBOUNCE_DELAY {50}; // ms
 };
 

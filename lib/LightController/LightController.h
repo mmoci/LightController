@@ -4,31 +4,28 @@
 #include "PirSensor.h"
 #include "Button.h"
 #include "Light.h"
-#include "MqttHandler.h"
+#include "MqttLightBridge.h"
 
 class LightController
 {
     public:
     struct LightEntry
     {
-        std::unique_ptr<Light> lightPtr{};
-        std::vector<std::unique_ptr<BinarySensor>> binarySensors{};
+        std::shared_ptr<Light> lightPtr{};
+        std::vector<std::shared_ptr<BinarySensor>> binarySensors{};
     };
 
-    LightController(MqttHandler* m_mqttHandler = nullptr);
+    LightController(MqttLightBridge* m_mqttLightBridge = nullptr);
 
     void setupDevices();
     void subscribe();
-    void addLight(std::unique_ptr<Light> light, std::vector<std::unique_ptr<BinarySensor>> binarySensors = {});
+    void addLight(std::shared_ptr<Light> light, std::vector<std::shared_ptr<BinarySensor>> binarySensors = {});
     void update();
 
     private:
-    std::string createDiscoveryPayload(const std::string& lightId) const;
-    std::string getDiscoveryPayload(const std::string& lightId) const;
-
     std::unordered_map<std::string, LightEntry> m_lights{};
     std::unordered_map<std::string, std::string> m_discoveryPayloadCache{};
-    MqttHandler* m_mqttHandler{};
+    MqttLightBridge* m_mqttLightBridge{};
 };
 
 #endif

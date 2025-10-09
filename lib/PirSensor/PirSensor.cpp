@@ -17,13 +17,14 @@ PirSensor::BinaryState PirSensor::readSensor()
     return BinarySensor::getState();
 }
 
-void PirSensor::bindToLight(Light& light)
+void PirSensor::bindToLight(std::shared_ptr<Light> lightPtr)
 {
-    subscribeOnStateChange([&light](PirSensor::BinaryState state){
-        if(state == PirSensor::BinaryState::High && light.getState() == Light::State::Off)
-            light.turnOn();
+    subscribeOnStateChange([lightWeakPtr = std::weak_ptr<Light>(lightPtr)](PirSensor::BinaryState state){
+        auto lightPtr = lightWeakPtr.lock();
+        if(state == PirSensor::BinaryState::High && lightPtr && lightPtr->getState() == Light::State::Off)
+            lightPtr->turnOn();
 
-        if(state == PirSensor::BinaryState::Low && light.getState() == Light::State::On)
-            light.turnOff();
+        if(state == PirSensor::BinaryState::Low && lightPtr && lightPtr->getState() == Light::State::On)
+            lightPtr->turnOff();
     });
 }

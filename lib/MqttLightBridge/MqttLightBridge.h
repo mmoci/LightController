@@ -25,7 +25,7 @@ class MqttLightBridge
     void addLight(std::shared_ptr<Light> lightPtr);
     void publishStateChange(const std::string& lightId, Light::State state);
     void publishBrightnessChange(const std::string& lightId, int brightness);
-    void registerCommandHandlers(const std::string& lightId, OnLightCommandCb m_onLightCommandCb);
+    void registerCommandHandlers(const std::string& lightId, OnLightCommandCb onLightCommandCb);
 };
 
 #endif

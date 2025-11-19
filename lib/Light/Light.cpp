@@ -113,9 +113,10 @@ void Light::turnOff()
 void Light::toggle()
 {
     setState(m_state == State::Off ? State::On : State::Off);
+    Serial.println("Light is " + String(stateToStr(m_state).c_str()) + " brightness " + m_brightness);
 }
 
-std::string Light::stateToStr(const Light::State& state)
+std::string Light::stateToStr(Light::State state)
 {
     switch(state)
     {

@@ -16,6 +16,18 @@ namespace
     }
 }
 
+void MqttLightBridge::addLight(std::shared_ptr<Light> lightPtr)
+{
+    if (m_lights.find(std::string{lightPtr->getId()}) != m_lights.end())
+    {
+        Serial.println("[Bridge] Light already registered, skipping.");
+        return;
+    }
+
+    m_lights.emplace(lightPtr->getId(), lightPtr);
+    m_discoveryPayloadCache.emplace(lightPtr->getId(), createDiscoveryPayload(std::string{lightPtr->getId()}));
+}
+
 void MqttLightBridge::publishDiscoveryTopics()
 {
     if(!m_mqttHandler) 
@@ -52,18 +64,6 @@ void MqttLightBridge::publishInitialStates()
         m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getStateTopic(lightId), light->stateToStr(light->getState()));
         m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getBrightnessTopic(lightId), std::to_string(light->getBrightness()));
     }
-}
-
-void MqttLightBridge::addLight(std::shared_ptr<Light> lightPtr)
-{
-    if (m_lights.find(std::string{lightPtr->getId()}) != m_lights.end())
-    {
-        Serial.println("[Bridge] Light already registered, skipping.");
-        return;
-    }
-
-    m_lights.emplace(lightPtr->getId(), lightPtr);
-    m_discoveryPayloadCache.emplace(lightPtr->getId(), createDiscoveryPayload(std::string{lightPtr->getId()}));
 }
 
 void MqttLightBridge::publishStateChange(const std::string& lightId, Light::State state)
@@ -121,17 +121,23 @@ void MqttLightBridge::registerCommandHandlers(const std::string& lightId, OnLigh
     
     auto commandTopic{MqttTopicBuilder::getStateCommandTopic(lightId)};
 
-    m_mqttHandler->subscribeTopic(commandTopic, [lightId, commandTopic, onLightCommandCb](const std::string& payload) {
+    m_mqttHandler->subscribeTopic(commandTopic, [commandTopic, onLightCommandCb](const std::string& payload) {
         std::string upperPayload{payload};
+        std::string strippedTopic{stripCommandTopic(commandTopic)};
 
         std::transform(upperPayload.begin(), upperPayload.end(), upperPayload.begin(), [](unsigned char c){return std::toupper(c);});
-        if(upperPayload == "ON") onLightCommandCb(stripCommandTopic(commandTopic), upperPayload); 
-        if(upperPayload == "OFF") onLightCommandCb(stripCommandTopic(commandTopic), upperPayload); 
+        if(upperPayload == "ON" || upperPayload == "OFF") {
+            onLightCommandCb(strippedTopic, upperPayload);
+        } 
+        else 
+        {
+            Serial.println("Unsupported payload, do nothing");
+        }
     });
     
     commandTopic = MqttTopicBuilder::getBrightnessCommandTopic(lightId);
 
-    m_mqttHandler->subscribeTopic(commandTopic, [lightId, commandTopic, onLightCommandCb](const std::string& payload) { 
+    m_mqttHandler->subscribeTopic(commandTopic, [commandTopic, onLightCommandCb](const std::string& payload) { 
         try
         {
             onLightCommandCb(stripCommandTopic(commandTopic), payload);
@@ -167,7 +173,7 @@ std::string MqttLightBridge::createDiscoveryPayload(const std::string& lightId) 
             "\"brightness\": true,"            // TODO: remove hardcodilg latter
             "\"device\": {"
                 "\"identifiers\": [\"" + std::string{Config::Mqtt::CLIENT_NAME} +"\"],"
-                "\"name\": \"" + std::string{"Kitchen Light Controller"} + "\","
+                "\"name\": \"" + std::string{"Light Controller"} + "\","
                 "\"manufacturer\": \"Marko Mocilac\""
             "}"
         "}";

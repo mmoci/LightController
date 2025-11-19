@@ -33,7 +33,7 @@ class Light
     void toggle();
     void subscribeOnStateChange(OnStateChange onStateChange);
     void subscribeOnBrightnessChange(OnBrightnessChange onStateChange);
-    std::string stateToStr(const Light::State& state);
+    std::string stateToStr(Light::State state);
 
     private:
     std::string m_name{};

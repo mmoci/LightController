@@ -4,6 +4,8 @@
 #include <string_view>
 #include <Arduino.h>
 
+#define ENABLE_MQTT   // Uncomment to enable MQTT
+
 namespace Config
 {
     // WiFi configuration variables

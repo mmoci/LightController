@@ -15,20 +15,19 @@ class BinarySensor : public Sensor
 
     using OnStateChange = std::function<void(const BinaryState&)>;
 
-    BinarySensor(int pin) : Sensor(pin)
-    {}
+    BinarySensor(int pin) : m_pin{pin} {}
+    virtual ~BinarySensor() = default;
 
     virtual void init() = 0;
     virtual BinaryState readSensor() = 0;
     virtual void bindToLight(std::shared_ptr<Light> lightPtr) = 0;
 
     void subscribeOnStateChange(OnStateChange onStateChange);
-    
-    virtual ~BinarySensor() = default;
-
     BinaryState getState() const noexcept {return m_state;}
 
     protected:
+    int m_pin{};
+
     void notifyStateChange(BinaryState newState);
 
     private:

@@ -143,3 +143,8 @@ bool BH1750::setMode()
     }
     return true;
 }
+
+bool BH1750::isLowLight()
+{
+    return static_cast<uint16_t>(std::round(m_luminance)) < LUMINANCE_THRESHOLD;
+}

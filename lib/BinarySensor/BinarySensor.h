@@ -13,17 +13,14 @@ class BinarySensor : public Sensor
         High
     };
 
-    using OnStateChange = std::function<void(const BinaryState&)>;
+    using OnStateChange = std::function<void(BinaryState)>;
 
     BinarySensor(int pin) : m_pin{pin} {}
     virtual ~BinarySensor() = default;
 
-    virtual void init() = 0;
-    virtual BinaryState readSensor() = 0;
-    virtual void bindToLight(std::shared_ptr<Light> lightPtr) = 0;
-
     void subscribeOnStateChange(OnStateChange onStateChange);
     BinaryState getState() const noexcept {return m_state;}
+    CommonType getCommonType() const override {return Sensor::CommonType::Binary;}
 
     protected:
     int m_pin{};

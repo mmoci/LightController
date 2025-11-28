@@ -8,7 +8,7 @@ void Button::init()
     pinMode(m_pin, INPUT);
 }
 
-Button::BinaryState Button::readSensor()
+void Button::update()
 {
     BinaryState currentState = static_cast<BinaryState>(digitalRead(m_pin));
 
@@ -21,15 +21,4 @@ Button::BinaryState Button::readSensor()
         m_stableState = currentState;    // accept as stable
         BinarySensor::notifyStateChange(currentState);
     }
-
-    return m_stableState;
-}
-
-void Button::bindToLight(std::shared_ptr<Light> lightPtr)
-{
-    subscribeOnStateChange([lightWeakPtr = std::weak_ptr<Light>(lightPtr)](Button::BinaryState state){
-        auto lightPtr = lightWeakPtr.lock();
-        if(lightPtr && state == Button::BinaryState::High)
-            lightPtr->toggle();
-    });
 }

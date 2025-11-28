@@ -17,11 +17,10 @@ class SensorI2C : public Sensor
     bool i2cDevicePresent();
 
     public:
-    SensorI2C(int address) : m_deviceAddress{address} 
+    SensorI2C(std::uint16_t address) : m_deviceAddress{address} 
     {}
 
-    virtual void init() = 0;
-    virtual void update() = 0;
+    CommonType getCommonType() const override {return Sensor::CommonType::I2C;}
 };
 
 #endif

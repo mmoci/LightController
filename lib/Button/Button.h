@@ -9,8 +9,8 @@ class Button : public BinarySensor
     Button(int pin);
 
     void init() override;
-    BinaryState readSensor() override;
-    void bindToLight(std::shared_ptr<Light> lightPtr) override;
+    void update() override;
+    SpecificType getSpecificType() const override {return Sensor::SpecificType::Button;}
 
     private:
     BinaryState m_lastState{BinaryState::Low};

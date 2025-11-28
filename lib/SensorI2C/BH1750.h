@@ -36,11 +36,15 @@ class BH1750 : public SensorI2C
         OneTimeLowRes = 0x23
     };
 
+    inline static constexpr std::uint16_t LUMINANCE_THRESHOLD {1000}; //lx
+
     BH1750(uint16_t deviceAddress, Mode mode);
 
     void init() override;
     void update() override;
+    SpecificType getSpecificType() const override {return Sensor::SpecificType::BH1750;}
     float getLuminance() const {return m_luminance;}
+    bool isLowLight();
     bool isValid() const { return m_valid; }
     bool setState(State state); // POWER ON/OFF/RESET
     bool setReset();

@@ -28,10 +28,10 @@ void setup()
   Serial.begin(115200);
 
   std::shared_ptr<Light> ledLight{std::make_shared<Light>(LIGHT_1_NAME, LIGHT_1_ID, LIGHT_PIN)};
-  std::vector<std::shared_ptr<BinarySensor>> binarySensors{};
-  binarySensors.emplace_back(std::make_shared<Button>(BUTTON_PIN));
-  binarySensors.emplace_back(std::make_shared<PirSensor>(PIR_PIN));
-  controller.addLight(std::move(ledLight), std::move(binarySensors));
+  std::vector<std::shared_ptr<Sensor>> sensors{};
+  sensors.emplace_back(std::make_shared<Button>(BUTTON_PIN));
+  sensors.emplace_back(std::make_shared<PirSensor>(PIR_PIN));
+  controller.addLight(std::move(ledLight), std::move(sensors));
   controller.setupDevices();
 
   #ifdef ENABLE_MQTT

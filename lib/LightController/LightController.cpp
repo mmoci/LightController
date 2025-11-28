@@ -5,9 +5,9 @@
 LightController::LightController(MqttLightBridge* mqttLightBridge) : m_mqttLightBridge{mqttLightBridge}
 {}
 
-void LightController::addLight(std::shared_ptr<Light> light, std::vector<std::shared_ptr<BinarySensor>> binarySensors)
+void LightController::addLight(std::shared_ptr<Light> light, std::vector<std::shared_ptr<Sensor>> sensors)
 {
-    m_lights.emplace(light->getId(), LightEntry{light, binarySensors});
+    m_lights.emplace(light->getId(), LightEntry{light, sensors});
 
     if(m_mqttLightBridge)
         m_mqttLightBridge->addLight(light);
@@ -17,8 +17,8 @@ void LightController::setupDevices()
 {
     for(auto& [lightId, lightEntry] : m_lights)
     {
-        for(auto& sensor : lightEntry.binarySensors)
-            sensor->init();
+        for(auto& sensorPtr : lightEntry.sensors)
+            sensorPtr->init();
 
         lightEntry.lightPtr->init();
     }
@@ -28,8 +28,8 @@ void LightController::update()
 {
     for(auto& [lightId, lightEntry] : m_lights)
     {
-        for(auto& sensor : lightEntry.binarySensors)
-            sensor->readSensor();
+        for(auto& sensorPtr : lightEntry.sensors)
+            sensorPtr->update();
     }
 }
 
@@ -44,12 +44,18 @@ void LightController::subscribe()
     // Subscribe to state change on all lights
     for(auto& [lightId, lightEntry] : m_lights)
     {
-        auto* lightPtr = lightEntry.lightPtr.get();
+        auto lightPtr{lightEntry.lightPtr};
 
         // Subscribe to state change on all binary sensors
-        for(auto& sensor : lightEntry.binarySensors)
+        for(auto& sensorPtr : lightEntry.sensors)
         {
-            sensor->bindToLight(lightEntry.lightPtr);
+            auto binarySensor {std::dynamic_pointer_cast<BinarySensor>(sensorPtr)};
+            if(binarySensor)
+            {
+                binarySensor->subscribeOnStateChange([this, lightId, binarySensor](BinarySensor::BinaryState state){
+                    handleBinarySensorStateChange(lightId, binarySensor.get(), state);
+                });
+            }
         }
 
         if(m_mqttLightBridge)
@@ -81,5 +87,47 @@ void LightController::subscribe()
                 }
             });
         }
+    }
+}
+
+void LightController::handleBinarySensorStateChange(const std::string& lightId, const BinarySensor* binarySensor, BinarySensor::BinaryState state)
+{
+    auto lightIt {m_lights.find(lightId)};
+
+    if(lightIt == m_lights.end())
+    {
+        Serial.printf("[LightController] LightId %s does not exists!\n", lightId.c_str());
+        return;
+    }
+
+    auto lightPtr{lightIt->second.lightPtr};
+    auto sensorType{binarySensor->getSpecificType()};
+
+    switch(sensorType)
+    {
+        case Sensor::SpecificType::Button:
+            if(lightPtr && state == Button::BinaryState::High)
+                lightPtr->toggle();
+            break;
+
+        case Sensor::SpecificType::PirSensor:
+            if(state == BinarySensor::BinaryState::High && lightPtr && lightPtr->getState() == Light::State::Off)
+            {
+                auto luminanceSensors {getSensors<BH1750>(lightId)};
+                for(auto& luminanceSensor : luminanceSensors)
+                {
+                    if(luminanceSensor->isLowLight())
+                        lightPtr->turnOn();
+                }
+            }
+
+            if(state == BinarySensor::BinaryState::Low && lightPtr && lightPtr->getState() == Light::State::On)
+            {
+                lightPtr->turnOff();
+            }
+            break;
+        
+        default:
+        Serial.printf("[LightController] Not supported sensor type %d\n", sensorType);
     }
 }

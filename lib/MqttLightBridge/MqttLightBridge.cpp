@@ -16,16 +16,24 @@ namespace
     }
 }
 
-void MqttLightBridge::addLight(std::shared_ptr<Light> lightPtr)
+void MqttLightBridge::addLight(std::weak_ptr<Light> lightPtr)
 {
-    if (m_lights.find(std::string{lightPtr->getId()}) != m_lights.end())
+    if(lightPtr.expired())
+    {
+        Serial.println("[Bridge] Light pointer expired, skipping.");
+        return;
+    }
+
+    auto light{lightPtr.lock()};
+
+    if (m_lights.find(std::string{light->getId()}) != m_lights.end())
     {
         Serial.println("[Bridge] Light already registered, skipping.");
         return;
     }
 
-    m_lights.emplace(lightPtr->getId(), lightPtr);
-    m_discoveryPayloadCache.emplace(lightPtr->getId(), createDiscoveryPayload(std::string{lightPtr->getId()}));
+    m_lights.emplace(light->getId(), lightPtr);
+    m_discoveryPayloadCache.emplace(light->getId(), createDiscoveryPayload(std::string{light->getId()}));
 }
 
 void MqttLightBridge::publishDiscoveryTopics()
@@ -61,8 +69,16 @@ void MqttLightBridge::publishInitialStates()
 
     for (const auto& [lightId, light] : m_lights) 
     {
-        m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getStateTopic(lightId), light->stateToStr(light->getState()));
-        m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getBrightnessTopic(lightId), std::to_string(light->getBrightness()));
+        if(light.expired())
+        {
+            Serial.println("[Bridge] Light pointer expired, skipping.");
+            return;
+        }
+
+        auto lightPtr{light.lock()};
+        
+        m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getStateTopic(lightId), lightPtr->stateToStr(lightPtr->getState()));
+        m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getBrightnessTopic(lightId), std::to_string(lightPtr->getBrightness()));
     }
 }
 
@@ -82,7 +98,15 @@ void MqttLightBridge::publishStateChange(const std::string& lightId, Light::Stat
         return;
     }
 
-    m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getStateTopic(lightId), it->second->stateToStr(state));
+    auto lightPtr{it->second};
+
+    if(lightPtr.expired())
+    {
+        Serial.println("[Bridge] Light pointer expired, skipping.");
+        return;
+    }
+
+    m_mqttHandler->enqueuePublishTopic(MqttTopicBuilder::getStateTopic(lightId), lightPtr.lock()->stateToStr(state));
 }
 
 void MqttLightBridge::publishBrightnessChange(const std::string& lightId, int brightness)
@@ -156,7 +180,15 @@ std::string MqttLightBridge::createDiscoveryPayload(const std::string& lightId) 
     if(it == m_lights.end())
         return {};
 
-    std::string lightName {it->second->getName()};
+    auto lightPtr{it->second};
+
+    if(lightPtr.expired())
+    {
+        Serial.println("[Bridge] Light pointer expired, skipping.");
+        return {};
+    }
+
+    std::string lightName {lightPtr.lock()->getName()};
 
     return
         "{"

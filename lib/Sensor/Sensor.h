@@ -6,12 +6,6 @@
 class Sensor
 {
     public:
-    enum class CommonType
-    {
-        Binary,
-        I2C
-    };
-
     enum class SpecificType
     {
         Button,
@@ -21,7 +15,6 @@ class Sensor
 
     virtual void init() = 0;
     virtual void update() = 0;
-    virtual CommonType getCommonType() const = 0;
     virtual SpecificType getSpecificType() const = 0;
     virtual ~Sensor() = default;
 };

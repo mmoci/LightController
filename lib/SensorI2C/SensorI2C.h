@@ -19,8 +19,6 @@ class SensorI2C : public Sensor
     public:
     SensorI2C(std::uint16_t address) : m_deviceAddress{address} 
     {}
-
-    CommonType getCommonType() const override {return Sensor::CommonType::I2C;}
 };
 
 #endif

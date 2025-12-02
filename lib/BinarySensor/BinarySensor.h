@@ -3,6 +3,7 @@
 
 #include "Sensor.h"
 #include "Light.h"
+#include <functional>
 
 class BinarySensor : public Sensor
 {
@@ -20,7 +21,6 @@ class BinarySensor : public Sensor
 
     void subscribeOnStateChange(OnStateChange onStateChange);
     BinaryState getState() const noexcept {return m_state;}
-    CommonType getCommonType() const override {return Sensor::CommonType::Binary;}
 
     protected:
     int m_pin{};

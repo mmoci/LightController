@@ -10,6 +10,9 @@
 #include <Config.h>
 #include <string_view>
 #include <set>
+#include <string>
+#include <unordered_map>
+#include <functional>
 
 class MqttHandler
 {

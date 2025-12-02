@@ -3,13 +3,17 @@
 
 #include "MqttHandler.h"
 #include "Light.h"
+#include <functional>
+#include <unordered_map>
+#include <string>
+#include <memory>
 
 class MqttLightBridge
 {
     using OnLightCommandCb = std::function<void(const std::string&, const std::string&)>;
 
     private:
-    std::unordered_map<std::string, std::shared_ptr<Light>> m_lights{};
+    std::unordered_map<std::string, std::weak_ptr<Light>> m_lights{};
     std::unordered_map<std::string, std::string> m_discoveryPayloadCache{};
     MqttHandler* m_mqttHandler{};
 
@@ -22,7 +26,7 @@ class MqttLightBridge
 
     void publishDiscoveryTopics();
     void publishInitialStates(); 
-    void addLight(std::shared_ptr<Light> lightPtr);
+    void addLight(std::weak_ptr<Light> lightPtr);
     void publishStateChange(const std::string& lightId, Light::State state);
     void publishBrightnessChange(const std::string& lightId, int brightness);
     void registerCommandHandlers(const std::string& lightId, OnLightCommandCb onLightCommandCb);

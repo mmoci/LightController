@@ -15,9 +15,9 @@ void LightController::addLight(std::shared_ptr<Light> light, std::vector<std::sh
 
 void LightController::setupDevices()
 {
-    for(auto& [lightId, lightEntry] : m_lights)
+    for(const auto& [lightId, lightEntry] : m_lights)
     {
-        for(auto& sensorPtr : lightEntry.sensors)
+        for(const auto& sensorPtr : lightEntry.sensors)
             sensorPtr->init();
 
         lightEntry.lightPtr->init();
@@ -26,9 +26,9 @@ void LightController::setupDevices()
 
 void LightController::update()
 {
-    for(auto& [lightId, lightEntry] : m_lights)
+    for(const auto& [lightId, lightEntry] : m_lights)
     {
-        for(auto& sensorPtr : lightEntry.sensors)
+        for(const auto& sensorPtr : lightEntry.sensors)
             sensorPtr->update();
     }
 }
@@ -45,15 +45,25 @@ void LightController::subscribe()
     for(auto& [lightId, lightEntry] : m_lights)
     {
         auto lightPtr{lightEntry.lightPtr};
+        auto lightPtrWeak = std::weak_ptr<Light>(lightPtr);
 
         // Subscribe to state change on all binary sensors
-        for(auto& sensorPtr : lightEntry.sensors)
+        for(const auto& sensorPtr : lightEntry.sensors)
         {
             auto binarySensor {std::dynamic_pointer_cast<BinarySensor>(sensorPtr)};
+            auto binarySensorWeak {std::weak_ptr<BinarySensor>(binarySensor)};
             if(binarySensor)
             {
-                binarySensor->subscribeOnStateChange([this, lightId, binarySensor](BinarySensor::BinaryState state){
-                    handleBinarySensorStateChange(lightId, binarySensor.get(), state);
+                binarySensor->subscribeOnStateChange([this, lightId, binarySensorWeak](BinarySensor::BinaryState state){
+                    if(binarySensorWeak.expired())
+                    {
+                        Serial.printf("[LightController] LightId %s: binary sensor expired!\n", lightId.c_str());
+                        return;
+                    }
+                    
+                    auto binarySensor{binarySensorWeak.lock()};
+
+                    handleBinarySensorStateChange(lightId, binarySensor, state);
                 });
             }
         }
@@ -61,16 +71,40 @@ void LightController::subscribe()
         if(m_mqttLightBridge)
         {
             // Subscribe to state change on the light
-            lightPtr->subscribeOnStateChange([this, lightId, lightPtr](const Light::State& state){
+            lightPtr->subscribeOnStateChange([this, lightId, lightPtrWeak](const Light::State& state){
+                if(lightPtrWeak.expired())
+                {
+                    Serial.printf("[LightController] LightId %s: state change subscribe is discarded!\n", lightId.c_str());
+                    return;
+                }
+
+                auto lightPtr{lightPtrWeak.lock()};
+
                 m_mqttLightBridge->publishStateChange(lightId, lightPtr->getState());
             });
 
             // Subscribe to brightness change on the light
-            lightPtr->subscribeOnBrightnessChange([this, lightId, lightPtr](int brightness){
+            lightPtr->subscribeOnBrightnessChange([this, lightId, lightPtrWeak](int brightness){
+                if(lightPtrWeak.expired())
+                {
+                    Serial.printf("[LightController] LightId %s: brightness subscribe is discarded!\n", lightId.c_str());
+                    return;
+                }
+
+                auto lightPtr{lightPtrWeak.lock()};
+
                 m_mqttLightBridge->publishBrightnessChange(lightId, lightPtr->getBrightness());
             });
 
-            m_mqttLightBridge->registerCommandHandlers(lightId, [lightPtr](const std::string& commandType, const std::string& payload){
+            m_mqttLightBridge->registerCommandHandlers(lightId, [lightId, lightPtrWeak](const std::string& commandType, const std::string& payload){
+                if(lightPtrWeak.expired())
+                {
+                    Serial.printf("[LightController] LightId %s: message is discarded!\n", lightId.c_str());
+                    return;
+                } 
+
+                auto lightPtr{lightPtrWeak.lock()};
+                    
                 if(commandType == "state")
                 {
                     if(payload == "ON") lightPtr->setState(Light::State::On); 
@@ -90,7 +124,7 @@ void LightController::subscribe()
     }
 }
 
-void LightController::handleBinarySensorStateChange(const std::string& lightId, const BinarySensor* binarySensor, BinarySensor::BinaryState state)
+void LightController::handleBinarySensorStateChange(const std::string& lightId, const std::shared_ptr<BinarySensor> binarySensor, BinarySensor::BinaryState state)
 {
     auto lightIt {m_lights.find(lightId)};
 
@@ -114,9 +148,9 @@ void LightController::handleBinarySensorStateChange(const std::string& lightId, 
             if(state == BinarySensor::BinaryState::High && lightPtr && lightPtr->getState() == Light::State::Off)
             {
                 auto luminanceSensors {getSensors<BH1750>(lightId)};
-                for(auto& luminanceSensor : luminanceSensors)
+                for(const auto& luminanceSensor : luminanceSensors)
                 {
-                    if(luminanceSensor->isLowLight())
+                    if(!luminanceSensor.expired() && luminanceSensor.lock()->isLowLight())
                         lightPtr->turnOn();
                 }
             }

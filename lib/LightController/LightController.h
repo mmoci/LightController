@@ -6,7 +6,9 @@
 #include "BH1750.h"
 #include "Light.h"
 #include "MqttLightBridge.h"
-#include <typeindex>
+#include <unordered_map>
+#include <string>
+#include <memory>
 
 class LightController
 {
@@ -26,19 +28,18 @@ class LightController
 
     private:
     std::unordered_map<std::string, LightEntry> m_lights{};
-    std::unordered_map<std::string, std::string> m_discoveryPayloadCache{};
     MqttLightBridge* m_mqttLightBridge{};
 
-    void handleBinarySensorStateChange(const std::string& lightId, const BinarySensor* binarySensor, BinarySensor::BinaryState state);
+    void handleBinarySensorStateChange(const std::string& lightId, const std::shared_ptr<BinarySensor> binarySensor, BinarySensor::BinaryState state);
 
     template<typename T>
-    std::vector<T*> getSensors(const std::string& lightId);
+    std::vector<std::weak_ptr<T>> getSensors(const std::string& lightId);
 };
 
 template <typename T>
-std::vector<T*> LightController::getSensors(const std::string& lightId)
+std::vector<std::weak_ptr<T>> LightController::getSensors(const std::string& lightId)
 {
-    std::vector<T*> sensorPtrs{};
+    std::vector<std::weak_ptr<T>> sensorPtrs{};
     auto lightIt{m_lights.find(lightId)};
 
     if(lightIt == m_lights.end())
@@ -51,7 +52,7 @@ std::vector<T*> LightController::getSensors(const std::string& lightId)
 
     for(auto& sensor : sensors)
     {
-        auto sensorPtr{dynamic_cast<T*>(sensor.get())};
+        auto sensorPtr{std::dynamic_pointer_cast<T>(sensor)};
         if(sensorPtr)
             sensorPtrs.emplace_back(sensorPtr);
     }

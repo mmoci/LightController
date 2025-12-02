@@ -5,6 +5,8 @@
 #include <functional>
 #include <vector>
 #include <memory>
+#include <string>
+#include <string_view>
 
 class Light
 {
